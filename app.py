@@ -2,7 +2,6 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 from transformers import pipeline
 import chromadb
-from chromadb.config import Settings
 import json
 from pathlib import Path
 import os
@@ -52,16 +51,19 @@ qa_model = load_qa_model()
 
 def init_chroma_db():
     if st.session_state.db is None:
-        settings = Settings(
-            chroma_db_impl="duckdb+parquet",
-            persist_directory=str(CHROMA_DIR),
-            anonymized_telemetry=False,
+
+        # Create persistent Chroma database
+        st.session_state.db = chromadb.PersistentClient(
+            path=str(CHROMA_DIR)
         )
-        st.session_state.db = chromadb.Client(settings)
+
         try:
-            st.session_state.collection = st.session_state.db.get_collection(name="documents")
+            st.session_state.collection = st.session_state.db.get_collection(
+                name="documents"
+            )
             st.session_state.documents_loaded = True
-        except:
+
+        except Exception:
             st.session_state.collection = st.session_state.db.create_collection(
                 name="documents",
                 metadata={"hnsw:space": "cosine"}
@@ -92,16 +94,19 @@ def chunk_document(text, chunk_size=400, overlap=50):
 
 def add_documents_to_db(documents_text):
     chunks = chunk_document(documents_text)
-    embeddings = embeddings_model.encode(chunks, convert_to_numpy=True)
-    
+
+    embeddings = embeddings_model.encode(
+        chunks,
+        convert_to_numpy=True
+    ).tolist()
+
     st.session_state.collection.add(
         embeddings=embeddings,
         documents=chunks,
         ids=[f"doc_{i}_{datetime.now().timestamp()}" for i in range(len(chunks))]
     )
-    
+
     st.session_state.documents_loaded = True
-    st.session_state.db.persist()
     return len(chunks)
 
 def retrieve_relevant_chunks(question, top_k=3):
