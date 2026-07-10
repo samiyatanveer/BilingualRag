@@ -13,8 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Minimal styling only — no hardcoded bubble colors, so Streamlit's own
-# light/dark theme handles text contrast correctly (this was the bug before).
+
 st.markdown("""
     <style>
     .main { padding-top: 1rem; }
@@ -32,13 +31,13 @@ CHROMA_DIR = Path("./chroma_data")
 CHROMA_DIR.mkdir(exist_ok=True)
 HISTORY_FILE = Path("./chat_history.json")
 
-# ---------- Session state ----------
+
 defaults = {
     "messages": [],
     "documents_loaded": False,
     "db": None,
     "collection": None,
-    "history_loaded": False,   # prevents re-reading the file every rerun
+    "history_loaded": False,   
 }
 for k, v in defaults.items():
     if k not in st.session_state:
@@ -72,9 +71,7 @@ def init_chroma_db():
 
 
 def load_chat_history():
-    # Only load from disk once per session — reloading on every rerun was
-    # harmless for correctness but wasteful, and masked the real duplicate bug
-    # (near-identical overlapping chunks, fixed below).
+   
     if not st.session_state.history_loaded:
         if HISTORY_FILE.exists():
             with open(HISTORY_FILE, "r", encoding="utf-8") as f:
@@ -88,9 +85,7 @@ def save_chat_history():
 
 
 def chunk_document(text, chunk_size=800, overlap=100):
-    # Old settings (400/50) meant ~87% overlap between consecutive chunks,
-    # so retrieved "top 3" results were almost the same text 3 times.
-    # 800/100 keeps useful continuity (~12% overlap) without the duplication.
+
     chunks = []
     step = chunk_size - overlap
     for i in range(0, len(text), step):
@@ -136,7 +131,7 @@ def answer_question(question, context):
 init_chroma_db()
 load_chat_history()
 
-# ---------- Sidebar: documents live here, always visible next to chat ----------
+
 with st.sidebar:
     st.markdown("### 📄 Documents")
 
@@ -183,7 +178,7 @@ with st.sidebar:
         st.metric("Chat messages", len(st.session_state.messages))
         st.caption("Multilingual embeddings + extractive QA")
 
-# ---------- Main area: chat, using Streamlit's native chat UI ----------
+
 st.markdown('<p class="header-main">📚 Document Q&A</p>', unsafe_allow_html=True)
 st.markdown(
     '<p class="subtitle">Ask questions about your documents in any language — '
@@ -191,7 +186,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Render prior conversation
+
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
@@ -201,7 +196,7 @@ for msg in st.session_state.messages:
                     st.caption(f"Source {j}")
                     st.text(chunk[:300] + "..." if len(chunk) > 300 else chunk)
 
-# Chat input — disabled until documents are loaded
+
 placeholder = (
     "What is... / یہ کیا ہے... / Iska matlab kya hai..."
     if st.session_state.documents_loaded
